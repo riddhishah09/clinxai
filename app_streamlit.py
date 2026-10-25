@@ -3,6 +3,7 @@ Run from the project folder:  streamlit run app_streamlit.py
 Needs: src/, models/rf_model.joblib, models/imputer.joblib, data/X_train.csv, data/X_test.csv
 Optional: .streamlit/config.toml (theme colours)
 """
+import html
 import json
 import os
 
@@ -87,6 +88,22 @@ h3 {{ font-size: 1.35rem !important; }}
             border: 2px solid #fff; border-radius: 4px; transform: translateX(-50%); }}
 .cx-tick {{ position: absolute; top: -4px; width: 2px; height: 22px; background: rgba(255,255,255,.9); }}
 .cx-scale {{ display: flex; justify-content: space-between; font-size: .75rem; color: #6A8288; }}
+
+/* Explanation cards */
+.cx-explain {{ background: #fff; border: 1px solid #D9E4E7; border-left: 5px solid {TEAL}; border-radius: 12px;
+               padding: 1rem 1.3rem; margin: .8rem 0 1.2rem; }}
+.cx-explain h4 {{ margin: 0 0 .5rem 0; font-size: 1.05rem; color: {INK}; }}
+.cx-explain p, .cx-explain li {{ color: #2F4D55; font-size: .96rem; line-height: 1.6; }}
+.cx-explain ul {{ margin: .3rem 0 .6rem 0; padding-left: 1.2rem; }}
+.cx-explain .up {{ color: {HIGH}; font-weight: 700; }}
+.cx-explain .down {{ color: #2563B8; font-weight: 700; }}
+.cx-explain code {{ background: {MINT}; color: {INK}; border-radius: 6px; padding: .05rem .35rem; }}
+
+.cx-table {{ width: 100%; border-collapse: collapse; font-size: .93rem; }}
+.cx-table th {{ text-align: left; color: #6A8288; font-weight: 600; padding: .35rem .5rem; border-bottom: 1px solid #D9E4E7; }}
+.cx-table td {{ padding: .55rem .5rem; border-bottom: 1px solid #EDF2F3; color: #2F4D55; }}
+.cx-table td.ref {{ color: #6A8288; }}
+.cx-pillc {{ color: #fff; border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; font-weight: 600; white-space: nowrap; }}
 
 /* KPI */
 .cx-kpi {{ background: #fff; border: 1px solid #D9E4E7; border-radius: 14px; padding: .9rem 1.1rem; }}
@@ -207,6 +224,222 @@ def kpi_row():
                      unsafe_allow_html=True)
 
 
+FRIENDLY = {"Pregnancies": "number of pregnancies", "Glucose": "glucose level",
+            "BloodPressure": "blood pressure", "SkinThickness": "skin thickness",
+            "Insulin": "insulin level", "BMI": "BMI",
+            "DiabetesPedigreeFunction": "family-history score", "Age": "age"}
+UNITS = {"Glucose": " mg/dL", "BloodPressure": " mm Hg", "SkinThickness": " mm",
+         "Insulin": " mu U/ml", "BMI": " kg/m2", "Age": " years"}
+
+
+def fmt_val(name, v):
+    return f"{v:.2f}".rstrip("0").rstrip(".") + UNITS.get(name, "")
+
+
+def explain_card(title, body_html):
+    st.markdown(f'<div class="cx-explain"><h4>{title}</h4>{body_html}</div>', unsafe_allow_html=True)
+
+
+def contribution_lists(shap_row, row, feats, points_ok):
+    """Plain-language bullet lists of what pushed the score up / down for this patient."""
+    pairs = sorted(zip(feats, shap_row), key=lambda p: p[1], reverse=True)
+    up = [p for p in pairs if p[1] > 0][:3]
+    down = [p for p in sorted(pairs, key=lambda p: p[1]) if p[1] < 0][:3]
+
+    def li(f, v, word, cls):
+        size = f" by about {abs(v) * 100:.0f} percentage points" if points_ok else ""
+        return (f"<li>Your <b>{FRIENDLY.get(f, f)}</b> ({fmt_val(f, row[f])}) "
+                f"<span class='{cls}'>{word}</span> the score{size}.</li>")
+
+    up_html = "".join(li(f, v, "raised", "up") for f, v in up) or "<li>Nothing pushed the score up noticeably.</li>"
+    down_html = "".join(li(f, v, "lowered", "down") for f, v in down) or "<li>Nothing pushed the score down noticeably.</li>"
+    return up_html, down_html
+
+
+def band_of(prob):
+    if prob < 0.35:
+        return LOW, "lower risk band"
+    if prob <= 0.65:
+        return MID, "borderline band"
+    return HIGH, "higher risk band"
+
+
+def headline_html(prob):
+    colour, band = band_of(prob)
+    if prob < 0.35:
+        meaning = "That is well below the 50% line, so the model says <i>no diabetes</i>."
+    elif prob <= 0.5:
+        meaning = ("That is below the 50% line, so the model says <i>no diabetes</i>, but it is not far "
+                   "below it. Some of your values may be raising the score (see below), so this is a good "
+                   "time to act early.")
+    elif prob <= 0.65:
+        meaning = ("That is above the 50% line, so the model says <i>diabetes</i>, but only slightly. "
+                   "A blood test from a doctor is the way to find out what is really happening.")
+    else:
+        meaning = ("That is well above the 50% line, so the model says <i>diabetes</i>. "
+                   "Please get a blood test from a doctor to confirm.")
+    return (f"<p>Your score is <b style='color:{colour}'>{prob:.0%}</b>, in the <b>{band}</b>. {meaning}</p>"
+            "<p>This does <b>not</b> mean you have a "
+            f"{prob:.0%} chance of having diabetes, and it is <b>not a diagnosis</b>. It is a score from a "
+            "computer model that compares your values with patterns in past patients.</p>")
+
+
+def range_rows(row, missing):
+    """(measure, your value, status, colour, healthy range) for values the person actually entered."""
+    rows = []
+    if not missing["Glucose"]:
+        g = row["Glucose"]
+        s, c = (("Normal", LOW) if g < 140 else
+                ("Above normal (prediabetes range)", MID) if g < 200 else ("In the diabetes range", HIGH))
+        rows.append(("Glucose (2-hour test)", fmt_val("Glucose", g), s, c, "Below 140 mg/dL"))
+    if not missing["BMI"]:
+        v = row["BMI"]
+        s, c = (("Underweight", MID) if v < 18.5 else ("Healthy", LOW) if v < 25 else
+                ("Overweight", MID) if v < 30 else ("Obese", HIGH))
+        rows.append(("BMI", fmt_val("BMI", v), s, c, "18.5 to 24.9"))
+    if not missing["BloodPressure"]:
+        v = row["BloodPressure"]
+        s, c = ("Normal", LOW) if v < 80 else ("Slightly high", MID) if v < 90 else ("High", HIGH)
+        rows.append(("Blood pressure (diastolic)", fmt_val("BloodPressure", v), s, c, "Below 80 mm Hg"))
+    return rows
+
+
+def ranges_html(rows):
+    if not rows:
+        return "<p>You marked glucose, BMI and blood pressure as unknown, so there is nothing to compare.</p>"
+    body = "".join(f"<tr><td>{m}</td><td><b>{v}</b></td>"
+                   f"<td><span class='cx-pillc' style='background:{c}'>{s}</span></td>"
+                   f"<td class='ref'>{r}</td></tr>" for m, v, s, c, r in rows)
+    return ("<table class='cx-table'><tr><th>Measure</th><th>Your value</th><th>Status</th>"
+            f"<th>Healthy range</th></tr>{body}</table>"
+            "<p style='font-size:.82rem;color:#6A8288;margin-top:.6rem'>General adult guideline ranges. "
+            "The glucose range assumes a 2-hour glucose tolerance test, which is how this dataset "
+            "measured glucose. Ranges can differ for some groups, so ask your doctor.</p>")
+
+
+def what_if_html(prob, model, row_df, row, missing):
+    items = []
+    for name, limit, target, text in [("BMI", 25, 24.9, "BMI were 24.9 (top of the healthy range)"),
+                                      ("Glucose", 140, 139.0, "glucose were 139 (just under the normal limit)")]:
+        if missing[name] or row[name] < limit:
+            continue
+        alt = row_df.copy()
+        alt[name] = target
+        p2 = float(model.predict_proba(alt)[0, 1])
+        if p2 < prob - 0.005:
+            res = f"the model's score would drop from <b>{prob:.0%}</b> to <b>{p2:.0%}</b>"
+        elif p2 > prob + 0.005:
+            res = f"the model's score would go from <b>{prob:.0%}</b> to <b>{p2:.0%}</b>"
+        else:
+            res = f"the model's score would stay at about <b>{p2:.0%}</b>"
+        items.append(f"<li>If your {text}, {res}.</li>")
+    if not items:
+        return ""
+    return ("<ul>" + "".join(items) + "</ul><p style='font-size:.85rem;color:#6A8288'>This is only a "
+            "what-if using the model. It shows what the model pays attention to, and it is not a promise "
+            "that changing one number will change your health.</p>")
+
+
+def advice_html(prob, row, missing, shap_row, feats):
+    steps = []
+    if prob < 0.35:
+        steps.append("<b>Get a routine blood sugar check</b> at your next regular check-up.")
+    elif prob <= 0.65:
+        steps.append("<b>Ask a doctor for a blood sugar test</b> (fasting glucose or HbA1c) in the next few "
+                     "weeks, to see where you really stand.")
+    else:
+        steps.append("<b>Book a doctor's visit soon</b> for a confirmation blood test. Only a doctor's test "
+                     "can confirm or rule out diabetes.")
+
+    pairs = sorted(zip(feats, shap_row), key=lambda p: p[1], reverse=True)
+    top_up = {f for f, _ in [p for p in pairs if p[1] > 0][:3]}
+
+    if not missing["Glucose"] and row["Glucose"] >= 200:
+        steps.append("<b>Your glucose reading is in the range that needs a doctor's follow-up,</b> whatever "
+                     "the model score says. Please do not wait.")
+    elif not missing["Glucose"] and row["Glucose"] >= 140:
+        steps.append("<b>Your glucose is above the normal range.</b> Cut down sugary drinks and sweets, "
+                     "choose whole grains, pulses and vegetables, and ask your doctor to repeat the test.")
+    if not missing["BMI"] and row["BMI"] >= 25:
+        steps.append(f"<b>Your BMI is {fmt_val('BMI', row['BMI'])}.</b> Losing even 5 to 7% of your body "
+                     "weight, slowly, is known to lower the risk of type 2 diabetes.")
+    if not missing["BloodPressure"] and row["BloodPressure"] >= 80:
+        steps.append(f"<b>Your diastolic blood pressure is {fmt_val('BloodPressure', row['BloodPressure'])}.</b> "
+                     "Cut down on salt, stay active, and have it checked again. A doctor can tell you "
+                     "whether it needs treatment.")
+    if row["Age"] >= 35:
+        steps.append("<b>Because of your age,</b> regular blood sugar screening is a good idea. Ask your "
+                     "doctor how often.")
+    if "DiabetesPedigreeFunction" in top_up:
+        steps.append("<b>Your family-history score is raising your result.</b> You cannot change family "
+                     "history, but it means regular check-ups matter more for you.")
+    if row["Pregnancies"] > 0:
+        steps.append("If you ever had <b>diabetes during pregnancy</b>, tell your doctor. It raises the "
+                     "chance of diabetes later in life.")
+    steps.append("<b>Move more:</b> aim for about 150 minutes a week of brisk walking or similar activity "
+                 "(for example 30 minutes, 5 days a week).")
+    steps.append("<b>Eat well:</b> fill half your plate with vegetables, choose whole grains, and cut down "
+                 "fried food and sugary drinks.")
+    steps.append("<b>Look after the basics:</b> sleep 7 to 8 hours and avoid smoking.")
+    return "<ul>" + "".join(f"<li>{s}</li>" for s in steps) + "</ul>"
+
+
+def personal_report(prob, model, row_df, row, feats, missing, shap_row, points_ok):
+    st.markdown("### Your personal report")
+    explain_card("Your result in simple words", headline_html(prob))
+
+    c1, c2 = st.columns(2, gap="large")
+    with c1:
+        explain_card("Your values compared with healthy ranges", ranges_html(range_rows(row, missing)))
+    with c2:
+        up_html, down_html = contribution_lists(shap_row, row, feats, points_ok)
+        explain_card("What is raising and lowering your score",
+                     f"<ul>{up_html}{down_html}</ul>")
+
+    wi = what_if_html(prob, model, row_df, row, missing)
+    if wi:
+        explain_card("What if some values were healthier?", wi)
+
+    explain_card("What you can do", advice_html(prob, row, missing, shap_row, feats))
+    explain_card("See a doctor sooner if you have any of these",
+                 "<p>Feeling very thirsty, passing urine much more often than usual, losing weight without "
+                 "trying, blurred vision, constant tiredness, or cuts and sores that heal slowly. Do not wait "
+                 "for a test or a model score if you notice these.</p>")
+    acc = None
+    if os.path.exists("outputs/metrics.json"):
+        acc = json.load(open("outputs/metrics.json"))["test"].get("accuracy")
+    reliab = (f"On the held-out test patients this model was right about {float(acc):.0%} of the time, so it "
+              "can be wrong for any one person. " if acc is not None else "This model can be wrong for any one person. ")
+    st.markdown(f'<p style="font-size:.85rem;color:#6A8288">{reliab}This report is general information for '
+                'a college project, not medical advice.</p>', unsafe_allow_html=True)
+
+
+def lime_reason(exp):
+    items = exp.as_list()
+    pos = sorted([i for i in items if i[1] > 0], key=lambda i: -i[1])[:3]
+    neg = sorted([i for i in items if i[1] < 0], key=lambda i: i[1])[:3]
+
+    def li(rule, w, word, cls):
+        return f"<li><code>{html.escape(rule)}</code> <span class='{cls}'>{word}</span> the risk (weight {w:+.2f}).</li>"
+
+    pos_html = "".join(li(r, w, "raised", "up") for r, w in pos) or "<li>None.</li>"
+    neg_html = "".join(li(r, w, "lowered", "down") for r, w in neg) or "<li>None.</li>"
+    score = getattr(exp, "score", None)
+    try:
+        score = float(score)
+        quality = ("fairly well" if score >= 0.5 else "only roughly")
+        q_html = (f"<p>LIME's simple model copies the forest {quality} around this patient "
+                  f"(match score R2 = {score:.2f}; closer to 1 is better). "
+                  + ("Trust the details less when the match is low.</p>" if score < 0.5 else "</p>"))
+    except (TypeError, ValueError):
+        q_html = ""
+    return (f"<p>LIME works by changing this patient's values a little many times, watching how the model "
+            "reacts, and fitting a very simple model to that behaviour. Each rule below is a condition "
+            "this patient meets.</p>"
+            f"<p><b>Rules that raised the risk:</b></p><ul>{pos_html}</ul>"
+            f"<p><b>Rules that lowered the risk:</b></p><ul>{neg_html}</ul>{q_html}")
+
+
 @st.cache_resource(show_spinner="Loading model and explainers...")
 def load_all():
     X_train, X_test, _, _ = load_split_data()
@@ -259,6 +492,8 @@ def main():
         row_df = pd.DataFrame(b["imputer"].transform(raw_df), columns=feats)
         row = row_df.iloc[0]
         prob = float(b["model"].predict_proba(row_df)[0, 1])
+        p_values, p_base = compute_shap(b["shap"], row_df)
+        points_ok = abs(float(p_base) + float(np.sum(p_values[0])) - prob) < 0.02
 
     with tab_pred:
         if row is None:
@@ -272,6 +507,12 @@ def main():
                 table = pd.DataFrame({"Feature": feats, "Value used": row.round(2).values,
                                       "Filled with median?": ["Yes" if m else "No" for m in was_missing]})
                 show_df(table, hide_index=True)
+            explain_card("How to read the risk bar",
+                         "<p>The marker shows where this patient's score falls from 0% to 100%. "
+                         "The white line in the middle is the 50% decision line. Left of it the model says "
+                         "<i>no diabetes</i>, right of it <i>diabetes</i>. The green, amber and red colours "
+                         "only make the position easier to see.</p>")
+            personal_report(prob, b["model"], row_df, row, feats, was_missing, p_values[0], points_ok)
         kpi_row()
 
     with tab_lime:
@@ -282,10 +523,16 @@ def main():
             st.write("Positive weights push toward diabetes, negative weights push away.")
             with st.spinner("Running LIME..."):
                 exp = explain_patient(b["lime"], b["model"], row, num_samples=3000)
+            explain_card("What LIME says about this patient", lime_reason(exp))
             fig = style_fig(exp.as_pyplot_figure())
             fig.set_size_inches(8, 4.5)
             fig.tight_layout()
             st.pyplot(fig)
+            explain_card("How to read the LIME chart",
+                         "<p>Each bar is one rule about this patient. A <b>green bar</b> pushes the prediction "
+                         "toward diabetes and a <b>red bar</b> pushes it away. The longer the bar, the stronger "
+                         "the push. LIME only describes the area close to this one patient, so another patient "
+                         "can get different rules.</p>")
             show_df(pd.DataFrame(exp.as_list(), columns=["Rule", "Weight"]).round(4), hide_index=True)
             plt.close(fig)
 
@@ -297,11 +544,25 @@ def main():
             st.markdown("### SHAP: each feature's contribution")
             st.write(f"SHAP starts from a base value of **{base:.2f}** and adds each feature's "
                      "contribution to reach this patient's prediction.")
+            final = float(base) + float(np.sum(values[0]))
+            up_html, down_html = contribution_lists(values[0], row, feats, points_ok)
+            explain_card("What SHAP says about this patient",
+                         f"<p>Across all training patients the model's average score is about <b>{float(base):.0%}</b>. "
+                         f"For this patient it ends at <b>{final:.0%}</b>. The difference comes from the "
+                         "patient's own values:</p>"
+                         f"<ul>{up_html}{down_html}</ul>")
             st.subheader("Waterfall plot")
             plt.close("all")
             shap.plots.waterfall(make_explanation(values[0], base, row), max_display=8, show=False)
             st.pyplot(plt.gcf())
             plt.close("all")
+            explain_card("How to read the waterfall",
+                         "<p>Read it from the bottom to the top. It starts at the average score "
+                         "(<code>E[f(X)]</code>). Each bar then adds or removes points: "
+                         "<span class='up'>red bars push the score up</span> (toward diabetes) and "
+                         "<span class='down'>blue bars push it down</span>. The top number "
+                         "(<code>f(x)</code>) is this patient's final score. Features are sorted by how much "
+                         "they matter, and small ones are grouped together.</p>")
             st.subheader("Force plot")
             try:
                 shap.force_plot(base, values[0], row.round(2).values, feature_names=feats,
@@ -310,11 +571,24 @@ def main():
             except Exception as e:
                 st.warning(f"Force plot not available here: {type(e).__name__}: {e}")
             plt.close("all")
+            explain_card("How to read the force plot",
+                         "<p>This is the same information as the waterfall, squeezed into one line. "
+                         "<span class='up'>Red features push the score to the right (higher risk)</span> and "
+                         "<span class='down'>blue features push it to the left (lower risk)</span>. "
+                         "The bigger the block, the stronger the push. The bold number is the final score "
+                         "and the point where red and blue meet.</p>")
 
     with tab_global:
         st.markdown("### Which features matter most overall?")
         st.write("Global importance is the mean absolute SHAP value over the 154 test patients.")
         imp = global_importance(b["test_values"], feats)
+        top = imp.sort_values(ascending=False)
+        names = [FRIENDLY.get(f, f) for f in top.index[:3]]
+        explain_card("What this tells us",
+                     f"<p>Across the test patients, the features that influenced the model's decisions most are "
+                     f"<b>{names[0]}</b>, then <b>{names[1]}</b> and <b>{names[2]}</b>. A longer bar means that "
+                     "feature changes the prediction more on average. Importance shows what the "
+                     "<i>model</i> relies on. It does not prove that a feature <i>causes</i> diabetes.</p>")
         g1, g2 = st.columns(2, gap="large")
         with g1:
             st.markdown("**Mean |SHAP| per feature**")
@@ -325,6 +599,13 @@ def main():
             shap.summary_plot(b["test_values"], b["X_test"], show=False)
             st.pyplot(plt.gcf())
             plt.close("all")
+        explain_card("How to read the beeswarm plot",
+                     "<p>Each dot is one test patient. Features are ordered by importance, with the most "
+                     "important at the top. A dot on the <b>right</b> pushed that patient toward diabetes and a "
+                     "dot on the <b>left</b> pushed away. The colour shows the feature's value: "
+                     "<span class='up'>red = high value</span>, <span class='down'>blue = low value</span>. "
+                     "For example, if red dots sit on the right for a feature, high values of it raise the "
+                     "predicted risk.</p>")
 
     st.markdown(f'<p style="text-align:center;color:#6A8288;font-size:.85rem;margin-top:2.5rem">'
                 f'ClinXAI &middot; college micro-project on interpretable machine learning &middot; '
