@@ -1,0 +1,41 @@
+feature,case,value,shap,lime_rule,lime_weight,lime_rank,shap_rank,rank_gap,sign_same
+Glucose,true_positive,164.0,0.2177520462774252,Glucose > 140.00,0.323439980297972,1,1,0,True
+Age,true_positive,32.0,0.0488822939684693,29.00 < Age <= 41.00,0.0706037657612905,2,2,0,True
+Pregnancies,true_positive,9.0,0.0451730482666184,Pregnancies > 6.00,0.0555780036704304,4,3,1,True
+DiabetesPedigreeFunction,true_positive,0.831,0.0408452403991343,DiabetesPedigreeFunction > 0.64,0.0687122040824994,3,4,1,True
+SkinThickness,true_positive,21.0,-0.0367038132461742,SkinThickness <= 25.00,-0.0330984649586073,6,5,1,True
+BMI,true_positive,30.8,0.0364228146685479,27.62 < BMI <= 32.40,0.0221007309311857,7,6,1,True
+Insulin,true_positive,125.0,0.0211898474371674,120.00 < Insulin <= 125.00,0.0538300162647937,5,7,2,True
+BloodPressure,true_positive,84.0,0.0086819897455536,BloodPressure > 80.00,0.0188826471042749,8,8,0,True
+Glucose,true_negative,91.0,-0.1533946972063408,Glucose <= 99.00,-0.2089379031411898,1,1,0,True
+BMI,true_negative,25.2,-0.1174153222185941,BMI <= 27.62,-0.1827465508941586,2,2,0,True
+Age,true_negative,23.0,-0.0645913745026766,Age <= 24.00,-0.099699676934076,4,3,1,True
+Insulin,true_negative,100.0,-0.0338661123292577,Insulin <= 120.00,-0.117203220392924,3,4,1,True
+DiabetesPedigreeFunction,true_negative,0.234,-0.0290584385863314,DiabetesPedigreeFunction <= 0.24,-0.0578617856643524,5,5,0,True
+BloodPressure,true_negative,54.0,-0.0281336411483856,BloodPressure <= 64.00,-0.0404226724289709,6,6,0,True
+Pregnancies,true_negative,1.0,-0.0232837616280244,Pregnancies <= 1.00,-0.0203240129277996,8,7,1,True
+SkinThickness,true_negative,25.0,-0.0218703805087389,SkinThickness <= 25.00,-0.0356207987251118,7,8,1,True
+Glucose,false_negative,78.0,-0.1908547312156307,Glucose <= 99.00,-0.2109750896316861,1,1,0,True
+Insulin,false_negative,88.0,-0.1023279941291742,Insulin <= 120.00,-0.1295960251039096,2,2,0,True
+Age,false_negative,26.0,-0.0552007090846584,24.00 < Age <= 29.00,-0.0512615023604106,3,3,0,True
+DiabetesPedigreeFunction,false_negative,0.248,-0.046591710546012,0.24 < DiabetesPedigreeFunction <= 0.38,-0.038473827689818,4,4,0,True
+BloodPressure,false_negative,50.0,-0.0326136126441743,BloodPressure <= 64.00,-0.0307280264943643,5,5,0,True
+Pregnancies,false_negative,3.0,-0.0147061878709442,1.00 < Pregnancies <= 3.00,-0.0169844454419057,7,6,1,True
+BMI,false_negative,31.0,0.0085496975946772,27.62 < BMI <= 32.40,0.0223243010620021,6,7,1,True
+SkinThickness,false_negative,32.0,0.0070603558370942,29.00 < SkinThickness <= 32.00,0.0164549662198687,8,8,0,True
+Glucose,false_positive,165.0,0.253362428511138,Glucose > 140.00,0.3170717063686391,1,1,0,True
+BMI,false_positive,47.9,0.1049237250674488,BMI > 36.50,0.1090298312531434,2,2,0,True
+Age,false_positive,26.0,-0.0481623323939171,24.00 < Age <= 29.00,-0.0473411834375325,5,3,2,True
+DiabetesPedigreeFunction,false_positive,0.259,-0.0352046816812584,0.24 < DiabetesPedigreeFunction <= 0.38,-0.0378260617900684,6,4,2,True
+SkinThickness,false_positive,43.0,0.0345315488728692,SkinThickness > 32.00,0.0496994487978373,4,5,1,True
+Insulin,false_positive,255.0,0.0318652389839744,Insulin > 130.00,0.0564892042277293,3,6,3,True
+Pregnancies,false_positive,0.0,-0.0111872680797466,Pregnancies <= 1.00,-0.0235435250133417,7,7,0,True
+BloodPressure,false_positive,76.0,0.0042720802176637,72.00 < BloodPressure <= 80.00,0.0079687923825713,8,8,0,True
+Glucose,borderline,193.0,0.2952681787415536,Glucose > 140.00,0.323291479474817,1,1,0,True
+BMI,borderline,25.9,-0.1664549004353396,BMI <= 27.62,-0.184254019786308,2,2,0,True
+Age,borderline,24.0,-0.0681449272422373,Age <= 24.00,-0.0980011673554081,3,3,0,True
+SkinThickness,borderline,16.0,-0.0556950121901474,SkinThickness <= 25.00,-0.0477153224282597,6,4,2,True
+Pregnancies,borderline,1.0,-0.0373456447448691,Pregnancies <= 1.00,-0.0226962172218441,8,5,3,True
+Insulin,borderline,375.0,0.0296396569308508,Insulin > 130.00,0.052994914595686,5,6,1,True
+BloodPressure,borderline,50.0,-0.0247874267222251,BloodPressure <= 64.00,-0.0337515958300673,7,7,0,True
+DiabetesPedigreeFunction,borderline,0.655,0.0237660728458439,DiabetesPedigreeFunction > 0.64,0.0731202515580052,4,8,4,True

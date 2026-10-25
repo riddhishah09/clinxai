@@ -1,0 +1,8 @@
+{
+  "n_patients": 30,
+  "mean_top3_overlap_out_of_3": 2.47,
+  "top1_same_fraction": 0.833,
+  "mean_sign_agreement_out_of_8": 7.13,
+  "mean_spearman_abs": 0.737,
+  "min_spearman_abs": 0.119
+}

@@ -1,0 +1,41 @@
+case,test_row,rule,weight
+true_positive,125,Glucose > 140.00,0.32343998029797205
+true_positive,125,29.00 < Age <= 41.00,0.07060376576129056
+true_positive,125,DiabetesPedigreeFunction > 0.64,0.0687122040824994
+true_positive,125,Pregnancies > 6.00,0.05557800367043048
+true_positive,125,120.00 < Insulin <= 125.00,0.053830016264793765
+true_positive,125,SkinThickness <= 25.00,-0.03309846495860732
+true_positive,125,27.62 < BMI <= 32.40,0.022100730931185707
+true_positive,125,BloodPressure > 80.00,0.018882647104274904
+true_negative,64,Glucose <= 99.00,-0.2089379031411898
+true_negative,64,BMI <= 27.62,-0.18274655089415862
+true_negative,64,Insulin <= 120.00,-0.11720322039292405
+true_negative,64,Age <= 24.00,-0.09969967693407604
+true_negative,64,DiabetesPedigreeFunction <= 0.24,-0.05786178566435249
+true_negative,64,BloodPressure <= 64.00,-0.04042267242897092
+true_negative,64,SkinThickness <= 25.00,-0.03562079872511188
+true_negative,64,Pregnancies <= 1.00,-0.02032401292779966
+false_negative,121,Glucose <= 99.00,-0.21097508963168618
+false_negative,121,Insulin <= 120.00,-0.1295960251039096
+false_negative,121,24.00 < Age <= 29.00,-0.051261502360410605
+false_negative,121,0.24 < DiabetesPedigreeFunction <= 0.38,-0.03847382768981802
+false_negative,121,BloodPressure <= 64.00,-0.0307280264943643
+false_negative,121,27.62 < BMI <= 32.40,0.022324301062002103
+false_negative,121,1.00 < Pregnancies <= 3.00,-0.0169844454419057
+false_negative,121,29.00 < SkinThickness <= 32.00,0.016454966219868732
+false_positive,9,Glucose > 140.00,0.3170717063686391
+false_positive,9,BMI > 36.50,0.10902983125314349
+false_positive,9,Insulin > 130.00,0.056489204227729316
+false_positive,9,SkinThickness > 32.00,0.04969944879783735
+false_positive,9,24.00 < Age <= 29.00,-0.04734118343753252
+false_positive,9,0.24 < DiabetesPedigreeFunction <= 0.38,-0.037826061790068456
+false_positive,9,Pregnancies <= 1.00,-0.023543525013341726
+false_positive,9,72.00 < BloodPressure <= 80.00,0.007968792382571315
+borderline,123,Glucose > 140.00,0.323291479474817
+borderline,123,BMI <= 27.62,-0.18425401978630804
+borderline,123,Age <= 24.00,-0.09800116735540816
+borderline,123,DiabetesPedigreeFunction > 0.64,0.07312025155800521
+borderline,123,Insulin > 130.00,0.052994914595686046
+borderline,123,SkinThickness <= 25.00,-0.047715322428259765
+borderline,123,BloodPressure <= 64.00,-0.03375159583006739
+borderline,123,Pregnancies <= 1.00,-0.0226962172218441

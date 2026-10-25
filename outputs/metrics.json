@@ -1,0 +1,25 @@
+{
+  "train": {
+    "accuracy": 0.855,
+    "precision": 0.7551,
+    "recall": 0.8645,
+    "f1": 0.8061,
+    "roc_auc": 0.9469,
+    "tn": 340,
+    "fp": 60,
+    "fn": 29,
+    "tp": 185
+  },
+  "test": {
+    "accuracy": 0.7468,
+    "precision": 0.619,
+    "recall": 0.7222,
+    "f1": 0.6667,
+    "roc_auc": 0.8157,
+    "tn": 76,
+    "fp": 24,
+    "fn": 15,
+    "tp": 39
+  },
+  "cv_roc_auc_mean": 0.8352
+}

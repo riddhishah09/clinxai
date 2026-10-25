@@ -1,0 +1,6 @@
+spearman_abs,top3_overlap,top1_lime,top1_shap,top1_same,sign_agree,n_features,case,true_label,model_prob
+0.905,2,Glucose,Glucose,True,8,8,true_positive,1,0.8822
+0.952,2,Glucose,Glucose,True,8,8,true_negative,0,0.0284
+0.976,3,Glucose,Glucose,True,8,8,false_negative,1,0.0733
+0.786,2,Glucose,Glucose,True,8,8,false_positive,0,0.8344
+0.643,3,Glucose,Glucose,True,8,8,borderline,0,0.4962

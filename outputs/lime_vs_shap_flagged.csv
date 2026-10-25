@@ -1,0 +1,4 @@
+case,feature,value,lime_weight,lime_rank,shap,shap_rank,sign_same
+false_positive,Insulin,255.0,0.0565,3,0.0319,6,True
+borderline,Pregnancies,1.0,-0.0227,8,-0.0373,5,True
+borderline,DiabetesPedigreeFunction,0.66,0.0731,4,0.0238,8,True
